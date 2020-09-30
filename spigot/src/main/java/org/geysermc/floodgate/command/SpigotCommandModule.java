@@ -23,31 +23,19 @@
  * @link https://github.com/GeyserMC/Floodgate
  */
 
-package org.geysermc.floodgate.module;
+package org.geysermc.floodgate.command;
 
-import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.ProvidesIntoSet;
-import org.geysermc.floodgate.command.LinkAccountCommand;
-import org.geysermc.floodgate.command.UnlinkAccountCommand;
+import org.geysermc.floodgate.module.CommandModule;
 import org.geysermc.floodgate.platform.command.Command;
-import org.geysermc.floodgate.register.CommandRegister;
 
-public class CommandModule extends AbstractModule {
-    @Override
-    protected void configure() {
-        bind(CommandRegister.class).asEagerSingleton();
-    }
+public class SpigotCommandModule extends CommandModule {
 
     @Singleton
     @ProvidesIntoSet
-    public Command linkAccountCommand() {
-        return new LinkAccountCommand();
+    public Command bedrockWhitelistCommand() {
+        return new BedrockWhitelistCommand();
     }
 
-    @Singleton
-    @ProvidesIntoSet
-    public Command unlinkAccountCommand() {
-        return new UnlinkAccountCommand();
-    }
 }

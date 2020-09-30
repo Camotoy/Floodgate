@@ -34,6 +34,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.geysermc.floodgate.api.FloodgateApi;
 import org.geysermc.floodgate.api.inject.PlatformInjector;
 import org.geysermc.floodgate.api.logger.FloodgateLogger;
+import org.geysermc.floodgate.command.BedrockWhitelistCommand;
 import org.geysermc.floodgate.config.loader.ConfigLoader;
 import org.geysermc.floodgate.link.PlayerLinkLoader;
 import org.geysermc.floodgate.util.LanguageManager;
@@ -58,6 +59,8 @@ public final class SpigotPlatform extends FloodgatePlatform {
         boolean success = super.enable(postInitializeModules);
         if (!success) {
             Bukkit.getPluginManager().disablePlugin(plugin);
+        } else {
+            Bukkit.getPluginManager().registerEvents(new BedrockWhitelistCommand(), plugin);
         }
         return success;
     }

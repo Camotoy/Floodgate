@@ -27,6 +27,7 @@ package org.geysermc.floodgate.util;
 
 import lombok.RequiredArgsConstructor;
 import org.bukkit.Bukkit;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.geysermc.floodgate.api.logger.FloodgateLogger;
@@ -42,14 +43,15 @@ public final class SpigotCommandUtil implements CommandUtil {
 
     @Override
     public void sendMessage(Object player, String locale, CommandMessage message, Object... args) {
-        cast(player).sendMessage(translateAndTransform(locale, message, args));
+        castAsSender(player).sendMessage(translateAndTransform(locale, message, args));
     }
 
     @Override
     public void kickPlayer(Object player, String locale, CommandMessage message, Object... args) {
         // Have to run this in the main thread so we don't get a `Asynchronous player kick!` error
         Bukkit.getScheduler().runTask(plugin,
-                () -> cast(player).kickPlayer(translateAndTransform(locale, message, args)));
+                () -> castAsPlayer(player).kickPlayer(translateAndTransform(locale, message,
+                        args)));
     }
 
     public String translateAndTransform(String locale, CommandMessage message, Object... args) {
@@ -59,12 +61,20 @@ public final class SpigotCommandUtil implements CommandUtil {
         );
     }
 
-    protected Player cast(Object instance) {
+    protected Player castAsPlayer(Object instance) {
         try {
             return (Player) instance;
         } catch (ClassCastException exception) {
             logger.error("Failed to cast {} to Player", instance.getClass().getName());
             throw exception;
         }
+    }
+
+    protected CommandSender castAsSender(Object instance) {
+        if (instance instanceof CommandSender) {
+            return (CommandSender) instance;
+        }
+        throw new RuntimeException(instance.getClass().getName() + " is not an instance of " +
+                "CommandSender");
     }
 }
