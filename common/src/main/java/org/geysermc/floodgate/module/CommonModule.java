@@ -26,14 +26,12 @@
 package org.geysermc.floodgate.module;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.Injector;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 import io.netty.util.AttributeKey;
 import java.nio.file.Path;
 import lombok.RequiredArgsConstructor;
-import org.geysermc.floodgate.HandshakeHandler;
 import org.geysermc.floodgate.api.FloodgateApi;
 import org.geysermc.floodgate.api.SimpleFloodgateApi;
 import org.geysermc.floodgate.api.inject.PlatformInjector;
@@ -42,6 +40,7 @@ import org.geysermc.floodgate.api.player.FloodgatePlayer;
 import org.geysermc.floodgate.config.FloodgateConfig;
 import org.geysermc.floodgate.config.FloodgateConfigHolder;
 import org.geysermc.floodgate.config.loader.ConfigLoader;
+import org.geysermc.floodgate.config.loader.DefaultConfigHandler;
 import org.geysermc.floodgate.config.updater.ConfigFileUpdater;
 import org.geysermc.floodgate.config.updater.ConfigUpdater;
 import org.geysermc.floodgate.crypto.AesCipher;
@@ -50,7 +49,7 @@ import org.geysermc.floodgate.crypto.Base64Topping;
 import org.geysermc.floodgate.crypto.FloodgateCipher;
 import org.geysermc.floodgate.crypto.KeyProducer;
 import org.geysermc.floodgate.inject.CommonPlatformInjector;
-import org.geysermc.floodgate.link.PlayerLinkLoader;
+import org.geysermc.floodgate.player.HandshakeHandler;
 import org.geysermc.floodgate.util.LanguageManager;
 
 @RequiredArgsConstructor
@@ -92,12 +91,19 @@ public class CommonModule extends AbstractModule {
     @Singleton
     public ConfigLoader configLoader(
             @Named("configClass") Class<? extends FloodgateConfig> configClass,
-            ConfigUpdater configUpdater, KeyProducer producer,
-            FloodgateCipher cipher, FloodgateLogger logger) {
+            DefaultConfigHandler defaultConfigHandler, ConfigUpdater configUpdater,
+            KeyProducer producer, FloodgateCipher cipher, FloodgateLogger logger) {
 
         return new ConfigLoader(
-                dataDirectory, configClass, configUpdater, producer, cipher, logger
+                dataDirectory, configClass, defaultConfigHandler,
+                configUpdater, producer, cipher, logger
         );
+    }
+
+    @Provides
+    @Singleton
+    public DefaultConfigHandler defaultConfigCreator() {
+        return new DefaultConfigHandler();
     }
 
     @Provides
@@ -116,18 +122,13 @@ public class CommonModule extends AbstractModule {
 
     @Provides
     @Singleton
-    public PlayerLinkLoader playerLinkLoader(Injector injector,
-                                             FloodgateConfigHolder configHolder,
-                                             FloodgateLogger logger,
-                                             @Named("dataDirectory") Path dataDirectory) {
-        return new PlayerLinkLoader(injector, configHolder, logger, dataDirectory);
-    }
-
-    @Provides
-    @Singleton
-    public HandshakeHandler handshakeHandler(SimpleFloodgateApi api, FloodgateCipher cipher,
-                                             FloodgateConfigHolder configHolder) {
-        return new HandshakeHandler(api, cipher, configHolder);
+    public HandshakeHandler handshakeHandler(
+            SimpleFloodgateApi api,
+            FloodgateCipher cipher,
+            FloodgateConfigHolder configHolder,
+            @Named("playerAttribute") AttributeKey<FloodgatePlayer> playerAttribute
+    ) {
+        return new HandshakeHandler(api, cipher, configHolder, playerAttribute);
     }
 
     @Provides

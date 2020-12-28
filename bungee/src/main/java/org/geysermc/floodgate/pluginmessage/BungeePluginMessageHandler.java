@@ -41,10 +41,12 @@ import net.md_5.bungee.api.event.PluginMessageEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.event.EventHandler;
+import net.md_5.bungee.event.EventPriority;
 import org.geysermc.cumulus.Form;
 import org.geysermc.floodgate.api.FloodgateApi;
 import org.geysermc.floodgate.api.logger.FloodgateLogger;
 import org.geysermc.floodgate.api.player.FloodgatePlayer;
+import org.geysermc.floodgate.api.player.PropertyKey;
 import org.geysermc.floodgate.config.FloodgateConfigHolder;
 import org.geysermc.floodgate.platform.pluginmessage.PluginMessageHandler;
 import org.geysermc.floodgate.skin.SkinApplier;
@@ -79,7 +81,7 @@ public final class BungeePluginMessageHandler extends PluginMessageHandler imple
         proxy.registerChannel(skinChannel);
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOW)
     public void onPluginMessage(PluginMessageEvent event) {
         Connection source = event.getSender();
 
@@ -151,16 +153,24 @@ public final class BungeePluginMessageHandler extends PluginMessageHandler imple
                     return;
                 }
 
+                // we only have to continue if the player doesn't already have a skin uploaded
+                if (floodgatePlayer.hasProperty(PropertyKey.SKIN_UPLOADED)) {
+                    return;
+                }
+
+                byte[] responseData = new byte[data.length - 2];
+                System.arraycopy(data, 2, responseData, 0, responseData.length);
+
                 JsonObject response;
                 try {
-                    Reader reader = new InputStreamReader(
-                            new ByteArrayInputStream(event.getData()));
+                    Reader reader = new InputStreamReader(new ByteArrayInputStream(responseData));
                     response = GSON.fromJson(reader, JsonObject.class);
                 } catch (Throwable throwable) {
                     logger.error("Failed to read Skin response", throwable);
                     return;
                 }
 
+                floodgatePlayer.addProperty(PropertyKey.SKIN_UPLOADED, response);
                 skinApplier.applySkin(floodgatePlayer, UploadResult.success(response));
                 return;
             }
@@ -187,12 +197,19 @@ public final class BungeePluginMessageHandler extends PluginMessageHandler imple
         return false;
     }
 
+    public boolean sendSkinRequest(Server server, RawSkin skin) {
+        if (server != null) {
+            server.sendData(skinChannel, createSkinRequestData(skin.encode()));
+            return true;
+        }
+        return false;
+    }
+
     @Override
     public boolean sendSkinRequest(UUID uuid, RawSkin skin) {
         ProxiedPlayer player = proxy.getPlayer(uuid);
         if (player != null) {
-            player.sendData(skinChannel, createSkinRequestData(skin.encode()));
-            return true;
+            return sendSkinRequest(player.getServer(), skin);
         }
         return false;
     }

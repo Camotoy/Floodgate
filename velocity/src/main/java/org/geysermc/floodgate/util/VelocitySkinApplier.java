@@ -23,18 +23,34 @@
  * @link https://github.com/GeyserMC/Floodgate
  */
 
-package org.geysermc.floodgate.platform.command;
+package org.geysermc.floodgate.util;
 
-/**
- * This class is responsible for registering commands to the command register of the platform that
- * is currently in use. So that the commands only have to be written once (in the common module) and
- * can be used across all platforms without the need of adding platform specific commands.
- */
-public interface CommandRegistration {
-    /**
-     * This method will register the specified command.
-     *
-     * @param command the command to register
-     */
-    void register(Command command);
+import com.google.gson.JsonObject;
+import com.velocitypowered.api.proxy.ProxyServer;
+import com.velocitypowered.api.util.GameProfile.Property;
+import java.util.ArrayList;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.geysermc.floodgate.api.player.FloodgatePlayer;
+import org.geysermc.floodgate.skin.SkinApplier;
+import org.geysermc.floodgate.skin.SkinUploader.UploadResult;
+
+@RequiredArgsConstructor
+public class VelocitySkinApplier implements SkinApplier {
+    private final ProxyServer server;
+
+    @Override
+    public void applySkin(FloodgatePlayer floodgatePlayer, UploadResult result) {
+        server.getPlayer(floodgatePlayer.getCorrectUniqueId()).ifPresent(player -> {
+            JsonObject response = result.getResponse();
+
+            List<Property> properties = new ArrayList<>(player.getGameProfileProperties());
+            properties.add(new Property(
+                    "textures",
+                    response.get("value").getAsString(),
+                    response.get("signature").getAsString()
+            ));
+            player.setGameProfileProperties(properties);
+        });
+    }
 }

@@ -36,12 +36,12 @@ import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import java.lang.reflect.Field;
 import lombok.RequiredArgsConstructor;
-import org.geysermc.floodgate.HandshakeHandler;
-import org.geysermc.floodgate.HandshakeHandler.HandshakeResult;
 import org.geysermc.floodgate.api.ProxyFloodgateApi;
 import org.geysermc.floodgate.api.logger.FloodgateLogger;
 import org.geysermc.floodgate.api.player.FloodgatePlayer;
 import org.geysermc.floodgate.config.ProxyFloodgateConfig;
+import org.geysermc.floodgate.player.HandshakeHandler;
+import org.geysermc.floodgate.player.HandshakeHandler.HandshakeResult;
 
 @RequiredArgsConstructor
 public final class VelocityProxyDataHandler extends SimpleChannelInboundHandler<Object> {
@@ -105,12 +105,6 @@ public final class VelocityProxyDataHandler extends SimpleChannelInboundHandler<
 
         FloodgatePlayer player = result.getFloodgatePlayer();
 
-        // we can't rely on Velocity when it comes to kicking the old players, so with this
-        // system we only have to check if the connection (which is already closed at that time)
-        // has the FloodgatePlayer attribute
-        ctx.channel().attr(playerAttribute).set(player);
-
-        api.addEncryptedData(player.getCorrectUniqueId(), result.getHandshakeData()[1]);
         logger.info("Floodgate player who is logged in as {} {} joined",
                 player.getCorrectUsername(), player.getCorrectUniqueId());
     }

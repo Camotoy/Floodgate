@@ -23,7 +23,7 @@
  * @link https://github.com/GeyserMC/Floodgate
  */
 
-package org.geysermc.floodgate;
+package org.geysermc.floodgate.player;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -40,6 +40,7 @@ import org.geysermc.floodgate.api.ProxyFloodgateApi;
 import org.geysermc.floodgate.api.link.PlayerLink;
 import org.geysermc.floodgate.api.player.FloodgatePlayer;
 import org.geysermc.floodgate.api.player.PropertyKey;
+import org.geysermc.floodgate.api.player.PropertyKey.Result;
 import org.geysermc.floodgate.config.FloodgateConfig;
 import org.geysermc.floodgate.config.FloodgateConfigHolder;
 import org.geysermc.floodgate.util.BedrockData;
@@ -64,12 +65,15 @@ public final class FloodgatePlayerImpl implements FloodgatePlayer {
     private final InputMode inputMode;
     private final String ip;
     private final boolean fromProxy;
+    private final boolean proxy; // if current platform is a proxy
     private final LinkedPlayer linkedPlayer;
     private final RawSkin rawSkin;
+
     @Getter(AccessLevel.PRIVATE)
     public Map<PropertyKey, Object> propertyKeyToValue;
     @Getter(AccessLevel.PRIVATE)
     private Map<String, PropertyKey> stringToPropertyKey;
+
     /**
      * Returns true if the player is still logging in
      */
@@ -93,12 +97,6 @@ public final class FloodgatePlayerImpl implements FloodgatePlayer {
         UiProfile uiProfile = UiProfile.getById(data.getUiProfile());
         InputMode inputMode = InputMode.getById(data.getInputMode());
 
-        // RawSkin must be removed from the encrypted data
-        if (api instanceof ProxyFloodgateApi) {
-            InstanceHolder.castApi(ProxyFloodgateApi.class)
-                    .updateEncryptedData(javaUniqueId, data);
-        }
-
         LinkedPlayer linkedPlayer;
 
         // we'll use the LinkedPlayer provided by Bungee or Velocity (if they included one)
@@ -113,11 +111,11 @@ public final class FloodgatePlayerImpl implements FloodgatePlayer {
         FloodgatePlayerImpl player = new FloodgatePlayerImpl(
                 data.getVersion(), data.getUsername(), javaUsername, javaUniqueId, data.getXuid(),
                 deviceOs, data.getLanguageCode(), uiProfile, inputMode, data.getIp(),
-                data.isFromProxy(), linkedPlayer, skin);
+                data.isFromProxy(), api instanceof ProxyFloodgateApi, linkedPlayer, skin);
 
-        // encrypted data has been changed after fetching the linkedPlayer
-        // We have to update it...
-        if (linkedPlayer != null && api instanceof ProxyFloodgateApi) {
+        // RawSkin should be removed, fromProxy should be changed
+        // and encrypted data can be changed after fetching the linkedPlayer
+        if (api instanceof ProxyFloodgateApi) {
             InstanceHolder.castApi(ProxyFloodgateApi.class)
                     .updateEncryptedData(player.getCorrectUniqueId(), player.toBedrockData());
         }
@@ -169,9 +167,26 @@ public final class FloodgatePlayerImpl implements FloodgatePlayer {
     public BedrockData toBedrockData() {
         return BedrockData.of(
                 version, username, xuid, deviceOs.ordinal(), languageCode,
-                uiProfile.ordinal(), inputMode.ordinal(), ip, linkedPlayer, fromProxy);
+                uiProfile.ordinal(), inputMode.ordinal(), ip, linkedPlayer, proxy);
     }
 
+    @Override
+    public boolean hasProperty(PropertyKey key) {
+        if (propertyKeyToValue == null) {
+            return false;
+        }
+        return propertyKeyToValue.get(key) != null;
+    }
+
+    @Override
+    public boolean hasProperty(String key) {
+        if (stringToPropertyKey == null) {
+            return false;
+        }
+        return hasProperty(stringToPropertyKey.get(key));
+    }
+
+    @Override
     public <T> T getProperty(PropertyKey key) {
         if (propertyKeyToValue == null) {
             return null;
@@ -179,6 +194,7 @@ public final class FloodgatePlayerImpl implements FloodgatePlayer {
         return (T) propertyKeyToValue.get(key);
     }
 
+    @Override
     public <T> T getProperty(String key) {
         if (stringToPropertyKey == null) {
             return null;
@@ -186,6 +202,7 @@ public final class FloodgatePlayerImpl implements FloodgatePlayer {
         return getProperty(stringToPropertyKey.get(key));
     }
 
+    @Override
     public <T> T removeProperty(String key) {
         if (stringToPropertyKey == null) {
             return null;
@@ -193,13 +210,14 @@ public final class FloodgatePlayerImpl implements FloodgatePlayer {
 
         PropertyKey propertyKey = stringToPropertyKey.get(key);
 
-        if (propertyKey == null || !propertyKey.isRemoveable()) {
+        if (propertyKey == null || !propertyKey.isRemovable()) {
             return null;
         }
 
         return (T) propertyKeyToValue.remove(propertyKey);
     }
 
+    @Override
     public <T> T removeProperty(PropertyKey key) {
         if (stringToPropertyKey == null) {
             return null;
@@ -207,13 +225,16 @@ public final class FloodgatePlayerImpl implements FloodgatePlayer {
 
         PropertyKey propertyKey = stringToPropertyKey.get(key.getKey());
 
-        if (propertyKey == null || !propertyKey.equals(key) || !propertyKey.isRemoveable()) {
+        if (propertyKey == null || !propertyKey.equals(key) || !propertyKey.isRemovable()) {
             return null;
         }
+
+        stringToPropertyKey.remove(key.getKey());
 
         return (T) propertyKeyToValue.remove(key);
     }
 
+    @Override
     public <T> T addProperty(PropertyKey key, Object value) {
         if (stringToPropertyKey == null) {
             stringToPropertyKey = new HashMap<>();
@@ -226,7 +247,7 @@ public final class FloodgatePlayerImpl implements FloodgatePlayer {
 
         PropertyKey propertyKey = stringToPropertyKey.get(key.getKey());
 
-        if (propertyKey != null && propertyKey.equals(key) && key.isChangeable()) {
+        if (propertyKey != null && propertyKey.isAddAllowed(key) == Result.ALLOWED) {
             stringToPropertyKey.put(key.getKey(), key);
             return (T) propertyKeyToValue.put(key, value);
         }
@@ -237,6 +258,7 @@ public final class FloodgatePlayerImpl implements FloodgatePlayer {
         });
     }
 
+    @Override
     public <T> T addProperty(String key, Object value) {
         PropertyKey propertyKey = new PropertyKey(key, true, true);
 
@@ -252,7 +274,7 @@ public final class FloodgatePlayerImpl implements FloodgatePlayer {
         PropertyKey currentPropertyKey = stringToPropertyKey.get(key);
 
         // key is always changeable if it passes this if statement
-        if (currentPropertyKey != null && currentPropertyKey.equals(propertyKey)) {
+        if (currentPropertyKey != null && currentPropertyKey.isAddAllowed(key) == Result.ALLOWED) {
             stringToPropertyKey.put(key, propertyKey);
             return (T) propertyKeyToValue.put(propertyKey, value);
         }

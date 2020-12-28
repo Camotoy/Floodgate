@@ -26,7 +26,7 @@
 package org.geysermc.floodgate.handler;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.geysermc.floodgate.HandshakeHandler.ResultType;
+import static org.geysermc.floodgate.player.HandshakeHandler.ResultType;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
@@ -40,13 +40,13 @@ import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.event.PreLoginEvent;
 import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.protocol.packet.Handshake;
-import org.geysermc.floodgate.HandshakeHandler;
-import org.geysermc.floodgate.HandshakeHandler.HandshakeResult;
 import org.geysermc.floodgate.api.ProxyFloodgateApi;
 import org.geysermc.floodgate.api.logger.FloodgateLogger;
 import org.geysermc.floodgate.api.player.FloodgatePlayer;
 import org.geysermc.floodgate.api.player.PropertyKey;
 import org.geysermc.floodgate.config.ProxyFloodgateConfig;
+import org.geysermc.floodgate.player.HandshakeHandler;
+import org.geysermc.floodgate.player.HandshakeHandler.HandshakeResult;
 import org.geysermc.floodgate.util.BedrockData;
 import org.geysermc.floodgate.util.ReflectionUtils;
 
@@ -124,13 +124,6 @@ public final class BungeeDataHandler {
 
             FloodgatePlayer player = result.getFloodgatePlayer();
 
-            String encryptedData = result.getHandshakeData()[1];
-            // remove skin from encrypted data if it has a skin
-            if (encryptedData.indexOf(0x21) != -1) {
-                encryptedData = encryptedData.substring(0, encryptedData.indexOf(0x21) - 1);
-            }
-            api.addEncryptedData(player.getCorrectUniqueId(), encryptedData);
-
             event.getConnection().setOnlineMode(false);
             event.getConnection().setUniqueId(player.getCorrectUniqueId());
 
@@ -155,8 +148,6 @@ public final class BungeeDataHandler {
 
             InetSocketAddress correctAddress = player.getProperty(PropertyKey.SOCKET_ADDRESS);
             ReflectionUtils.setValue(channelWrapper, PLAYER_REMOTE_ADDRESS, correctAddress);
-
-            channel.attr(playerAttribute).set(player);
 
             event.completeIntent(plugin);
         });

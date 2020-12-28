@@ -23,31 +23,27 @@
  * @link https://github.com/GeyserMC/Floodgate
  */
 
-package org.geysermc.floodgate.module;
+package org.geysermc.floodgate.player;
 
-import com.google.inject.AbstractModule;
-import com.google.inject.Singleton;
-import com.google.inject.multibindings.ProvidesIntoSet;
-import org.geysermc.floodgate.command.LinkAccountCommand;
-import org.geysermc.floodgate.command.UnlinkAccountCommand;
-import org.geysermc.floodgate.platform.command.FloodgateCommand;
-import org.geysermc.floodgate.register.CommandRegister;
+import cloud.commandframework.execution.preprocessor.CommandPreprocessingContext;
+import cloud.commandframework.execution.preprocessor.CommandPreprocessor;
+import lombok.RequiredArgsConstructor;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.geysermc.floodgate.platform.command.CommandUtil;
 
-public class CommandModule extends AbstractModule {
+/**
+ * Command preprocessor which decorated incoming {@link cloud.commandframework.context.CommandContext}
+ * with Floodgate specific objects
+ *
+ * @param <C> Command sender type
+ * @since 2.0
+ */
+@RequiredArgsConstructor
+public final class FloodgateCommandPreprocessor<C> implements CommandPreprocessor<C> {
+    private final CommandUtil commandUtil;
+
     @Override
-    protected void configure() {
-        bind(CommandRegister.class).asEagerSingleton();
-    }
-
-    @Singleton
-    @ProvidesIntoSet
-    public FloodgateCommand linkAccountCommand() {
-        return new LinkAccountCommand();
-    }
-
-    @Singleton
-    @ProvidesIntoSet
-    public FloodgateCommand unlinkAccountCommand() {
-        return new UnlinkAccountCommand();
+    public void accept(@NonNull CommandPreprocessingContext<C> context) {
+        context.getCommandContext().store("CommandUtil", commandUtil);
     }
 }

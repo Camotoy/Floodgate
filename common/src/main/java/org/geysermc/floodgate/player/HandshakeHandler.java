@@ -23,12 +23,13 @@
  * @link https://github.com/GeyserMC/Floodgate
  */
 
-package org.geysermc.floodgate;
+package org.geysermc.floodgate.player;
 
 import static org.geysermc.floodgate.util.BedrockData.EXPECTED_LENGTH;
 
 import com.google.common.base.Charsets;
 import io.netty.channel.Channel;
+import io.netty.util.AttributeKey;
 import java.net.InetSocketAddress;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -41,6 +42,7 @@ import org.geysermc.floodgate.api.player.PropertyKey;
 import org.geysermc.floodgate.config.FloodgateConfigHolder;
 import org.geysermc.floodgate.crypto.AesCipher;
 import org.geysermc.floodgate.crypto.FloodgateCipher;
+import org.geysermc.floodgate.util.Base64Utils;
 import org.geysermc.floodgate.util.BedrockData;
 import org.geysermc.floodgate.util.InvalidFormatException;
 import org.geysermc.floodgate.util.RawSkin;
@@ -50,6 +52,7 @@ public final class HandshakeHandler {
     private final SimpleFloodgateApi api;
     private final FloodgateCipher cipher;
     private final FloodgateConfigHolder configHolder;
+    private final AttributeKey<FloodgatePlayer> playerAttribute;
 
     public HandshakeResult handle(Channel channel, @NonNull String handshakeData) {
         try {
@@ -67,15 +70,16 @@ public final class HandshakeHandler {
                 return ResultType.NOT_FLOODGATE_DATA.getCachedResult();
             }
 
-            // calculate the expected Base64 encoded IV length.
-            int expectedIvLength = 4 * ((AesCipher.IV_LENGTH + 2) / 3);
+            // header + base64 iv - 0x21 - encrypted data - 0x21 - RawSkin
+            int expectedHeaderLength = FloodgateCipher.HEADER_LENGTH +
+                    Base64Utils.getEncodedLength(AesCipher.IV_LENGTH);
             int lastSplitIndex = data.lastIndexOf(0x21);
 
             byte[] floodgateData;
             byte[] rawSkinData = null;
 
             // if it has a RawSkin
-            if (lastSplitIndex - expectedIvLength != 0) {
+            if (lastSplitIndex - expectedHeaderLength > 0) {
                 floodgateData = data.substring(0, lastSplitIndex).getBytes(Charsets.UTF_8);
                 rawSkinData = data.substring(lastSplitIndex + 1).getBytes(Charsets.UTF_8);
             } else {
@@ -100,6 +104,8 @@ public final class HandshakeHandler {
 
             FloodgatePlayer player = FloodgatePlayerImpl.from(bedrockData, rawSkin, configHolder);
             api.addPlayer(player.getJavaUniqueId(), player);
+
+            channel.attr(playerAttribute).set(player);
 
             int port = ((InetSocketAddress) channel.remoteAddress()).getPort();
             InetSocketAddress socketAddress = new InetSocketAddress(bedrockData.getIp(), port);

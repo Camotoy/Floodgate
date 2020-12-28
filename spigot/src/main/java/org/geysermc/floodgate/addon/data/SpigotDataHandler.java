@@ -36,7 +36,6 @@ import static org.geysermc.floodgate.util.ReflectionUtils.setValue;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.util.AttributeKey;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -44,12 +43,12 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.geysermc.floodgate.HandshakeHandler;
-import org.geysermc.floodgate.HandshakeHandler.HandshakeResult;
 import org.geysermc.floodgate.api.logger.FloodgateLogger;
 import org.geysermc.floodgate.api.player.FloodgatePlayer;
 import org.geysermc.floodgate.api.player.PropertyKey;
 import org.geysermc.floodgate.config.FloodgateConfig;
+import org.geysermc.floodgate.player.HandshakeHandler;
+import org.geysermc.floodgate.player.HandshakeHandler.HandshakeResult;
 import org.geysermc.floodgate.util.BedrockData;
 import org.geysermc.floodgate.util.ReflectionUtils;
 
@@ -158,7 +157,6 @@ public final class SpigotDataHandler extends SimpleChannelInboundHandler<Object>
     /* per player stuff */
     private final FloodgateConfig config;
     private final HandshakeHandler handshakeHandler;
-    private final AttributeKey<FloodgatePlayer> playerAttribute;
     private final FloodgateLogger logger;
     private Object networkManager;
     private FloodgatePlayer fPlayer;
@@ -196,8 +194,6 @@ public final class SpigotDataHandler extends SimpleChannelInboundHandler<Object>
                     default: // only continue when SUCCESS
                         return;
                 }
-
-                ctx.channel().attr(playerAttribute).set(result.getFloodgatePlayer());
 
                 fPlayer = result.getFloodgatePlayer();
                 BedrockData bedrockData = result.getBedrockData();

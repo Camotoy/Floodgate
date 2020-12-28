@@ -37,14 +37,16 @@ import net.md_5.bungee.api.event.ServerConnectedEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.event.EventHandler;
 import net.md_5.bungee.event.EventPriority;
-import org.geysermc.floodgate.FloodgatePlayerImpl;
 import org.geysermc.floodgate.api.ProxyFloodgateApi;
 import org.geysermc.floodgate.api.logger.FloodgateLogger;
 import org.geysermc.floodgate.api.player.FloodgatePlayer;
+import org.geysermc.floodgate.api.player.PropertyKey;
 import org.geysermc.floodgate.config.ProxyFloodgateConfig;
 import org.geysermc.floodgate.handler.BungeeDataHandler;
-import org.geysermc.floodgate.platform.pluginmessage.PluginMessageHandler;
+import org.geysermc.floodgate.player.FloodgatePlayerImpl;
+import org.geysermc.floodgate.pluginmessage.BungeePluginMessageHandler;
 import org.geysermc.floodgate.skin.SkinHandler;
+import org.geysermc.floodgate.util.BungeeCommandUtil;
 import org.geysermc.floodgate.util.LanguageManager;
 
 public final class BungeeListener implements Listener {
@@ -54,7 +56,7 @@ public final class BungeeListener implements Listener {
     @Inject private FloodgateLogger logger;
 
     @Inject private ProxyFloodgateConfig config;
-    @Inject private PluginMessageHandler pluginMessageHandler;
+    @Inject private BungeePluginMessageHandler pluginMessageHandler;
     @Inject private SkinHandler skinHandler;
 
     @Inject
@@ -69,19 +71,21 @@ public final class BungeeListener implements Listener {
 
     @EventHandler
     public void onServerConnected(ServerConnectedEvent event) {
-        ProxiedPlayer player = event.getPlayer();
-        FloodgatePlayer floodgatePlayer = api.getPlayer(player.getUniqueId());
-        if (floodgatePlayer == null) {
+        FloodgatePlayer player = api.getPlayer(event.getPlayer().getUniqueId());
+        if (player == null) {
+            return;
+        }
+
+        // only ask for skin upload if it hasn't been uploaded already
+        if (player.hasProperty(PropertyKey.SKIN_UPLOADED)) {
             return;
         }
 
         // send skin request to server if data forwarding allows that
         if (config.isSendFloodgateData()) {
-            pluginMessageHandler.sendSkinRequest(player.getUniqueId(),
-                    floodgatePlayer.getRawSkin());
+            pluginMessageHandler.sendSkinRequest(event.getServer(), player.getRawSkin());
         } else {
-            //todo also a Proxy SkinHandler to keep stuff clean?
-            skinHandler.handleSkinUploadFor(floodgatePlayer, null);
+            skinHandler.handleSkinUploadFor(player, null);
         }
     }
 
@@ -123,6 +127,9 @@ public final class BungeeListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerDisconnect(PlayerDisconnectEvent event) {
         ProxiedPlayer player = event.getPlayer();
+
+        BungeeCommandUtil.AUDIENCE_CACHE.remove(player.getUniqueId()); //todo
+
         if (api.removePlayer(player.getUniqueId()) != null) {
             api.removeEncryptedData(player.getUniqueId());
             logger.translatedInfo("floodgate.ingame.disconnect_name", player.getName());

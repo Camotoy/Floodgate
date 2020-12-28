@@ -26,28 +26,26 @@
 package org.geysermc.floodgate.module;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import com.google.inject.multibindings.ProvidesIntoSet;
-import org.geysermc.floodgate.command.LinkAccountCommand;
-import org.geysermc.floodgate.command.UnlinkAccountCommand;
-import org.geysermc.floodgate.platform.command.FloodgateCommand;
-import org.geysermc.floodgate.register.CommandRegister;
+import lombok.RequiredArgsConstructor;
+import org.geysermc.floodgate.config.FloodgateConfig;
+import org.geysermc.floodgate.config.ProxyFloodgateConfig;
 
-public class CommandModule extends AbstractModule {
+@RequiredArgsConstructor
+public final class ConfigLoadedModule extends AbstractModule {
+    private final FloodgateConfig config;
+
     @Override
     protected void configure() {
-        bind(CommandRegister.class).asEagerSingleton();
+        if (config instanceof ProxyFloodgateConfig) {
+            bind(ProxyFloodgateConfig.class).toInstance((ProxyFloodgateConfig) config);
+        }
     }
 
+    @Provides
     @Singleton
-    @ProvidesIntoSet
-    public FloodgateCommand linkAccountCommand() {
-        return new LinkAccountCommand();
-    }
-
-    @Singleton
-    @ProvidesIntoSet
-    public FloodgateCommand unlinkAccountCommand() {
-        return new UnlinkAccountCommand();
+    public FloodgateConfig floodgateConfig() {
+        return config;
     }
 }

@@ -25,55 +25,65 @@
 
 package org.geysermc.floodgate.module;
 
+import cloud.commandframework.CommandManager;
+import cloud.commandframework.execution.CommandExecutionCoordinator;
+import cloud.commandframework.velocity.CloudInjectionModule;
+import cloud.commandframework.velocity.VelocityCommandManager;
 import com.google.inject.AbstractModule;
+import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
-import com.velocitypowered.api.command.CommandManager;
+import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.event.EventManager;
 import com.velocitypowered.api.proxy.ProxyServer;
 import io.netty.util.AttributeKey;
+import lombok.RequiredArgsConstructor;
 import org.geysermc.floodgate.VelocityPlugin;
-import org.geysermc.floodgate.api.ProxyFloodgateApi;
-import org.geysermc.floodgate.api.SimpleFloodgateApi;
 import org.geysermc.floodgate.api.logger.FloodgateLogger;
-import org.geysermc.floodgate.command.VelocityCommandRegistration;
-import org.geysermc.floodgate.config.FloodgateConfig;
 import org.geysermc.floodgate.config.FloodgateConfigHolder;
-import org.geysermc.floodgate.config.ProxyFloodgateConfig;
-import org.geysermc.floodgate.crypto.FloodgateCipher;
 import org.geysermc.floodgate.inject.CommonPlatformInjector;
 import org.geysermc.floodgate.inject.velocity.VelocityInjector;
 import org.geysermc.floodgate.listener.VelocityListenerRegistration;
 import org.geysermc.floodgate.listener.VelocityPluginMessageHandler;
 import org.geysermc.floodgate.logger.Slf4jFloodgateLogger;
-import org.geysermc.floodgate.platform.command.CommandRegistration;
 import org.geysermc.floodgate.platform.command.CommandUtil;
 import org.geysermc.floodgate.platform.listener.ListenerRegistration;
 import org.geysermc.floodgate.platform.pluginmessage.PluginMessageHandler;
+import org.geysermc.floodgate.player.FloodgateCommandPreprocessor;
+import org.geysermc.floodgate.player.UserAudience;
+import org.geysermc.floodgate.skin.SkinApplier;
 import org.geysermc.floodgate.util.LanguageManager;
 import org.geysermc.floodgate.util.VelocityCommandUtil;
+import org.geysermc.floodgate.util.VelocitySkinApplier;
 import org.slf4j.Logger;
 
+@RequiredArgsConstructor
 public final class VelocityPlatformModule extends AbstractModule {
+    private final Injector guice;
+
     @Override
     protected void configure() {
-        bind(SimpleFloodgateApi.class).to(ProxyFloodgateApi.class);
+        VelocityCommandUtil commandUtil = new VelocityCommandUtil();
+        requestInjection(commandUtil);
+
         bind(CommandUtil.class).to(VelocityCommandUtil.class);
-    }
+        bind(VelocityCommandUtil.class).toInstance(commandUtil);
 
-    @Provides
-    @Singleton
-    @Named("configClass")
-    public Class<? extends FloodgateConfig> floodgateConfigClass() {
-        return ProxyFloodgateConfig.class;
-    }
+        Injector child = guice.createChildInjector(new CloudInjectionModule<>(
+                UserAudience.class,
+                CommandExecutionCoordinator.simpleCoordinator(),
+                commandUtil::getAudience,
+                audience -> (CommandSource) audience.source()
+        ));
 
-    @Provides
-    @Singleton
-    public ProxyFloodgateApi proxyFloodgateApi(PluginMessageHandler pluginMessageHandler,
-                                               FloodgateCipher cipher) {
-        return new ProxyFloodgateApi(pluginMessageHandler, cipher);
+        CommandManager<UserAudience> commandManager =
+                child.getInstance(new Key<VelocityCommandManager<UserAudience>>() {});
+
+        bind(new Key<CommandManager<UserAudience>>() {}).toInstance(commandManager);
+
+        commandManager.registerCommandPreProcessor(new FloodgateCommandPreprocessor<>(commandUtil));
     }
 
     @Provides
@@ -88,21 +98,6 @@ public final class VelocityPlatformModule extends AbstractModule {
 
     @Provides
     @Singleton
-    public CommandRegistration commandRegistration(CommandManager commandManager,
-                                                   VelocityCommandUtil commandUtil,
-                                                   LanguageManager languageManager) {
-        return new VelocityCommandRegistration(commandManager, commandUtil, languageManager);
-    }
-
-    @Provides
-    @Singleton
-    public VelocityCommandUtil commandUtil(FloodgateLogger logger,
-                                           LanguageManager languageManager) {
-        return new VelocityCommandUtil(logger, languageManager);
-    }
-
-    @Provides
-    @Singleton
     public ListenerRegistration<Object> listenerRegistration(EventManager eventManager,
                                                              VelocityPlugin plugin) {
         return new VelocityListenerRegistration(eventManager, plugin);
@@ -114,14 +109,20 @@ public final class VelocityPlatformModule extends AbstractModule {
         return new VelocityPluginMessageHandler(configHolder);
     }
 
+    @Provides
+    @Singleton
+    public SkinApplier skinApplier(ProxyServer server) {
+        return new VelocitySkinApplier(server);
+    }
+
     /*
     DebugAddon / PlatformInjector
      */
 
     @Provides
     @Singleton
-    public CommonPlatformInjector platformInjector(ProxyServer server) {
-        return new VelocityInjector(server);
+    public CommonPlatformInjector platformInjector(ProxyServer server, FloodgateLogger logger) {
+        return new VelocityInjector(server, logger);
     }
 
     @Provides
