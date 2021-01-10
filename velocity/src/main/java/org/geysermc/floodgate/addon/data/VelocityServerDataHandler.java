@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020 GeyserMC. http://geysermc.org
+ * Copyright (c) 2019-2021 GeyserMC. http://geysermc.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -85,8 +85,6 @@ public final class VelocityServerDataHandler extends MessageToMessageEncoder<Obj
         }
 
         if (!HANDSHAKE_PACKET.isInstance(packet) || !config.isSendFloodgateData()) {
-            System.out.println(
-                    HANDSHAKE_PACKET.isInstance(packet) + " " + config.isSendFloodgateData());
             done = true;
             out.add(packet);
             return;
@@ -104,7 +102,6 @@ public final class VelocityServerDataHandler extends MessageToMessageEncoder<Obj
 
         // player is not a Floodgate player
         if (player == null) {
-            System.out.println("Not Floodgate player");
             out.add(packet);
             return;
         }

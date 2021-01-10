@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020 GeyserMC. http://geysermc.org
+ * Copyright (c) 2019-2021 GeyserMC. http://geysermc.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -93,7 +93,6 @@ public final class ConfigFileUpdater {
 
                     spaces = "  ";
                     //todo allow rename of subcategory?
-                    System.out.println("subcategory: " + line.substring(0, splitIndex));
                     map = (Map<String, Object>) currentVersion.get(line.substring(0, splitIndex));
                     map.entrySet().forEach(System.out::println);
                     continue;

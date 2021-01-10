@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020 GeyserMC. http://geysermc.org
+ * Copyright (c) 2019-2021 GeyserMC. http://geysermc.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,7 @@ package org.geysermc.floodgate.link;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import org.geysermc.floodgate.api.FloodgateApi;
+import org.geysermc.floodgate.api.link.LinkRequestResult;
 import org.geysermc.floodgate.api.link.PlayerLink;
 import org.geysermc.floodgate.util.LinkedPlayer;
 
@@ -58,6 +59,25 @@ final class DisabledPlayerLink implements PlayerLink {
 
     @Override
     public CompletableFuture<Void> unlinkPlayer(UUID javaId) {
+        return null;
+    }
+
+    @Override
+    public CompletableFuture<?> createLinkRequest(
+            UUID javaId,
+            String javaUsername,
+            String bedrockUsername
+    ) {
+        return null;
+    }
+
+    @Override
+    public CompletableFuture<LinkRequestResult> verifyLinkRequest(
+            UUID bedrockId,
+            String javaUsername,
+            String bedrockUsername,
+            String code
+    ) {
         return null;
     }
 

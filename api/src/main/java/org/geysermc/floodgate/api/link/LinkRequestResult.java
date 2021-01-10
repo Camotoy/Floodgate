@@ -23,23 +23,39 @@
  * @link https://github.com/GeyserMC/Floodgate
  */
 
-package org.geysermc.floodgate.register;
+package org.geysermc.floodgate.api.link;
 
-import com.google.inject.Inject;
-import com.google.inject.Injector;
-import java.util.Set;
-import org.geysermc.floodgate.api.inject.InjectorAddon;
-import org.geysermc.floodgate.api.inject.PlatformInjector;
-
-public final class AddonRegister {
-    @Inject private Injector guice;
-    @Inject private PlatformInjector injector;
-
-    @Inject
-    public void registerAddons(Set<InjectorAddon> addons) {
-        for (InjectorAddon addon : addons) {
-            guice.injectMembers(addon);
-            injector.addAddon(addon);
-        }
-    }
+/**
+ * This enum has all the available result types of both creating a player link request and
+ * validating it.
+ */
+public enum LinkRequestResult {
+    /**
+     * An unknown error encountered while creating / verifying the link request.
+     */
+    UNKNOWN_ERROR,
+    /**
+     * @deprecated this result isn't used. Instead the link code is returned
+     */
+    REQUEST_CREATED,
+    /**
+     * The specified bedrock username is already linked to a Java account.
+     */
+    ALREADY_LINKED,
+    /**
+     * The Bedrock player verified the request too late. The request has been expired.
+     */
+    REQUEST_EXPIRED,
+    /**
+     * The Java player hasn't requested a link to this Bedrock account.
+     */
+    NO_LINK_REQUESTED,
+    /**
+     * The entered code is invalid.
+     */
+    INVALID_CODE,
+    /**
+     * The link request has been verified successfully!
+     */
+    LINK_COMPLETED
 }

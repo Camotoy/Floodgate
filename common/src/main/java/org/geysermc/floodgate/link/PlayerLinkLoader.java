@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020 GeyserMC. http://geysermc.org
+ * Copyright (c) 2019-2021 GeyserMC. http://geysermc.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -64,6 +64,11 @@ public final class PlayerLinkLoader {
         FloodgateConfig.PlayerLinkConfig linkConfig = config.getPlayerLink();
         if (!linkConfig.isEnabled()) {
             return new DisabledPlayerLink();
+        }
+
+        // we use our own internal PlayerLinking when global linking is enabled
+        if (linkConfig.isUseGlobalLinking()) {
+            return injector.getInstance(GlobalPlayerLinking.class);
         }
 
         List<Path> files;

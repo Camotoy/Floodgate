@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020 GeyserMC. http://geysermc.org
+ * Copyright (c) 2019-2021 GeyserMC. http://geysermc.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -57,8 +57,6 @@ public final class ConfigUpdater {
         }
 
         Map<String, Object> config = new Yaml().load(configReader);
-
-        config.forEach((key, value) -> System.out.println(key + ":" + value + " (" + value.getClass().getName() + ")"));
 
         // new name -> old name
         Map<String, String> renames = new HashMap<>();

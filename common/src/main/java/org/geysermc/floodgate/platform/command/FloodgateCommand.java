@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020 GeyserMC. http://geysermc.org
+ * Copyright (c) 2019-2021 GeyserMC. http://geysermc.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,12 +28,17 @@ package org.geysermc.floodgate.platform.command;
 import cloud.commandframework.Command;
 import cloud.commandframework.CommandManager;
 import cloud.commandframework.context.CommandContext;
+import org.geysermc.floodgate.config.FloodgateConfig;
 import org.geysermc.floodgate.player.UserAudience;
 
-/**
- * The base class for every Floodgate command.
- */
+/** The base class for every Floodgate command. */
 public interface FloodgateCommand {
+    /**
+     * Called by the CommandRegister when it wants you to build the command which he can add.
+     *
+     * @param commandManager the manager to create a command
+     * @return the command to register
+     */
     Command<UserAudience> buildCommand(CommandManager<UserAudience> commandManager);
 
     /**
@@ -42,4 +47,14 @@ public interface FloodgateCommand {
      * @param context the context of the executed command
      */
     void execute(CommandContext<UserAudience> context);
+
+    /**
+     * Called by the CommandRegister to check if the command should be added given the config.
+     *
+     * @param config the config to check if a command should be added
+     * @return true if it should be added
+     */
+    default boolean shouldRegister(FloodgateConfig config) {
+      return true;
+    }
 }
